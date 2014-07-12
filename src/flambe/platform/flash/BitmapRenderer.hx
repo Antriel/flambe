@@ -4,10 +4,15 @@
 
 package flambe.platform.flash;
 
+import flambe.asset.AssetEntry.AssetFormat;
+import flambe.subsystem.RendererSystem.RendererType;
+import flambe.util.Value;
 import flash.display.Bitmap;
 import flash.display.BitmapData;
 import flash.events.Event;
+import flash.geom.Rectangle;
 import flash.Lib;
+import haxe.io.Bytes;
 
 import flambe.display.Texture;
 
@@ -15,10 +20,14 @@ class BitmapRenderer
     implements InternalRenderer<BitmapData>
 {
 	
+	public var type (get, null) :RendererType;
+	public var maxTextureSize (get, null) :Int;
+	public var hasGPU (get, null) :Value<Bool>;
 	public var graphics :InternalGraphics = null;
 	
     public function new ()
     {
+		_hasGPU = new Value<Bool>(true);
         var stage = Lib.current.stage;
 
         _bitmap = new Bitmap();
@@ -28,10 +37,46 @@ class BitmapRenderer
         onResize(null);
     }
 
-    public function uploadTexture (texture :Texture)
+    /*public function uploadTexture (texture :Texture)
     {
         // Nothing
+    }*/
+	
+	public function getCompressedTextureFormats () :Array<AssetFormat>
+    {
+        return [];
     }
+
+    public function createCompressedTexture (format :AssetFormat, data :Bytes) :Texture
+    {
+        throw "Not supported";
+        return null;
+    }
+	
+	inline private function get_type () :RendererType
+    {
+        return FlashBitmap;
+    }
+	
+	inline private function get_maxTextureSize () :Int
+    {
+        return 2048; // The max supported by BASELINE_CONSTRAINED
+    }
+	
+	inline private function get_hasGPU () :Value<Bool>
+    {
+        return _hasGPU;
+    }
+	
+	public function createTexture (width :Int, height :Int) :Texture {
+		var root = new BitmapTextureRoot(new BitmapData(width, height, false, 0xffffff));
+        return root.createTexture(width, height);
+	}
+	
+	public function createTextureFromImage (bitmapData :BitmapData) :Texture {
+		var root = new BitmapTextureRoot(bitmapData);
+        return root.createTexture(bitmapData.width, bitmapData.height);
+	}
 
     public function willRender ()
     {
@@ -59,11 +104,11 @@ class BitmapRenderer
         }
 
         _screen = new BitmapData(width, height, false, 0xffffff);
-        _graphics = new BitmapGraphics(_screen);
+        graphics = new BitmapGraphics(_screen);
         _bitmap.bitmapData = _screen;
     }
 
     private var _screen :BitmapData;
     private var _bitmap :Bitmap;
-    private var _graphics :InternalGraphics;
+	private var _hasGPU :Value<Bool>;
 }

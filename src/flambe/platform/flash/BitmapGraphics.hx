@@ -13,8 +13,7 @@ import flash.geom.Matrix;
 import flash.geom.Point;
 import flash.geom.Rectangle;
 import flash.Lib;
-
-import haxe.FastList;
+import haxe.ds.GenericStack;
 
 import flambe.display.BlendMode;
 import flambe.display.Texture;
@@ -26,13 +25,38 @@ class BitmapGraphics
     public function new (buffer :BitmapData)
     {
         _buffer = buffer;
-        _stack = new FastList<DrawingState>();
+        _stack = new GenericStack<DrawingState>();
+		save();
         _shape = new Shape();
         _pixel = new BitmapData(1, 1, false);
         _scratchRect = new Rectangle();
         _scratchPoint = new Point();
         _scratchMatrix = new Matrix();
     }
+	
+	public function applyScissor (x :Float, y :Float, width :Float, height :Float)
+    {
+        throw "Not implemented";
+    }
+	
+	public function willRender ()
+    {
+        // Nothing at all
+    }
+
+    public function didRender ()
+    {
+        // Nothing at all
+    }
+	
+	public function onResize (width :Int, height :Int)
+    {
+        // Nothing at all
+    }
+	
+	public function setAlpha (alpha :Float) {
+		getTopState().color.alphaMultiplier = alpha;//TODO is this the correct way?
+	}
 
     public function save ()
     {
@@ -96,13 +120,24 @@ class BitmapGraphics
         flushGraphics();
         _stack.pop();
     }
+	
+	public function transform (m00 :Float, m10 :Float, m01 :Float, m11 :Float, m02 :Float, m12 :Float)
+    {
+		_scratchMatrix.a = m00;//TODO check if correct
+		_scratchMatrix.b = m10;
+		_scratchMatrix.c = m01;
+		_scratchMatrix.d = m11;
+		_scratchMatrix.tx = m02;
+		_scratchMatrix.ty = m12;
+		getTopState().matrix.concat(_scratchMatrix);
+    }
 
-    public function drawImage (texture :Texture, destX :Float, destY :Float)
+    public function drawTexture (texture :Texture, destX :Float, destY :Float)
     {
         blit(texture, destX, destY, null);
     }
 
-    public function drawSubImage (texture :Texture, destX :Float, destY :Float,
+    public function drawSubTexture (texture :Texture, destX :Float, destY :Float,
         sourceX :Float, sourceY :Float, sourceW :Float, sourceH :Float)
     {
         _scratchRect.x = sourceX;
@@ -116,8 +151,10 @@ class BitmapGraphics
     {
         beginGraphics();
 
-        var flashTexture = Lib.as(texture, FlashTexture);
-        _graphics.beginBitmapFill(flashTexture.bitmapData);
+        var flashTexture = Lib.as(texture, BitmapTexture);
+		var root = flashTexture.root;
+		root.assertNotDisposed();
+        _graphics.beginBitmapFill(root.image);
         _graphics.drawRect(x, y, width, height);
     }
 
@@ -196,6 +233,7 @@ class BitmapGraphics
         switch (blendMode) {
             case Normal: state.blendMode = null;
             case Add: state.blendMode = flash.display.BlendMode.ADD;
+			default: throw "Not Implemented";
         };
     }
 
@@ -203,35 +241,46 @@ class BitmapGraphics
     {
         flushGraphics();
 
-        var flashTexture = Lib.as(texture, FlashTexture);
+        var flashTexture = Lib.as(texture, BitmapTexture);
+		var root = flashTexture.root;
+		root.assertNotDisposed();
         var state = getTopState();
         var matrix = state.matrix;
 
         // Use the faster copyPixels() if possible
         // TODO(bruno): Use approximately equals?
+		
         if (matrix.a == 1 && matrix.b == 0 && matrix.c == 0 && matrix.d == 1
                 && state.color == null && state.blendMode == null) {
 
             if (sourceRect == null) {
                 sourceRect = _scratchRect;
-                sourceRect.x = 0;
-                sourceRect.y = 0;
+                /*sourceRect.x = 0;
+                sourceRect.y = 0;*/
+				sourceRect.x = flashTexture.x;
+                sourceRect.y = flashTexture.y;
                 sourceRect.width = flashTexture.width;
                 sourceRect.height = flashTexture.height;
             }
             _scratchPoint.x = matrix.tx + destX;
             _scratchPoint.y = matrix.ty + destY;
-            _buffer.copyPixels(flashTexture.bitmapData, sourceRect, _scratchPoint);
+			
+            _buffer.copyPixels(root.image, sourceRect, _scratchPoint);
 
         } else {
-            var copy = null;
-            if (destX != 0 || destY != 0) {
+			_scratchMatrix.copyFrom(matrix);
+			translate(destX, destY);
+			//matrix.translate(flashTexture.x, flashTexture.y);//TODO: will this work???
+			
+			
+            /*var copy = null;
+            if (destX != 0 || destY != 0) { 
                 // TODO(bruno): Optimize?
                 copy = matrix.clone();
                 translate(destX, destY);
-            }
+            }*/
             if (sourceRect != null) {
-                // BitmapData.draw() doesn't support a source rect, so we have to use a temp
+                /*// BitmapData.draw() doesn't support a source rect, so we have to use a temp
                 // (contrary to the docs, clipRect is relative to the target, not the source)
                 if (sourceRect.width > 0 && sourceRect.height > 0) {
                     // TODO(bruno): Optimize?
@@ -242,15 +291,34 @@ class BitmapGraphics
                     _scratchPoint.y = 0;
                     scratch.copyPixels(flashTexture.bitmapData, sourceRect, _scratchPoint);
                     _buffer.draw(scratch, matrix, state.color, state.blendMode, null, true);
+					_buffer.draw(
                     scratch.dispose();
+                }*/
+				if (sourceRect.width > 0 && sourceRect.height > 0) {
+					_buffer.draw(root.image, matrix, state.color, state.blendMode, sourceRect, true);
                 }
             } else {
-                _buffer.draw(flashTexture.bitmapData, matrix,
-                    state.color, state.blendMode, null, true);
+				_scratchRect.width = flashTexture.width;
+				_scratchRect.height = flashTexture.height;
+				/*_scratchRect.x = -flashTexture.rootX;
+				_scratchRect.y = -flashTexture.rootY;*/
+				/*_scratchRect.x = 0;
+				_scratchRect.y = 0;*/
+				_scratchMatrix.identity();
+				_scratchMatrix.translate(-flashTexture.rootX, -flashTexture.rootY);
+				_scratchMatrix.concat(matrix);
+				_scratchRect.x = matrix.tx;
+				_scratchRect.y = matrix.ty;
+				/*matrix.tx -= flashTexture.x;
+				matrix.ty -= flashTexture.y;*/
+				
+               //_buffer.draw(root.image, _scratchMatrix, state.color, state.blendMode, _scratchRect, true);
+               _buffer.draw(root.image, _scratchMatrix, state.color, state.blendMode, null, true);
             }
-            if (copy != null) {
+            /*if (copy != null) {
                 state.matrix = copy;
-            }
+            }*/
+			state.matrix.copyFrom(_scratchMatrix);
         }
     }
 
@@ -277,7 +345,7 @@ class BitmapGraphics
         }
     }
 
-    private var _stack :FastList<DrawingState>;
+    private var _stack :GenericStack<DrawingState>;
     private var _buffer :BitmapData;
 
     // The shape used for all rendering that can't be done with a BitmapData
