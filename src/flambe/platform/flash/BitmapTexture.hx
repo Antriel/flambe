@@ -13,8 +13,6 @@ class BitmapTexture extends BasicTexture<BitmapTextureRoot> {
 	
     public function new(root:BitmapTextureRoot, width:Int, height:Int) {
         super(root, width, height);
-		/*image = new BitmapData(width, height, true, 0);
-		image.copyPixels(root.image, image.rect, _zeroPoint);*/
 		image = root.image;
     }
 	
