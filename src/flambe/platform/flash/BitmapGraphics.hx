@@ -123,23 +123,24 @@ class BitmapGraphics
 	
 	public function transform (m00 :Float, m10 :Float, m01 :Float, m11 :Float, m02 :Float, m12 :Float)
     {
+		var matrix = getTopState().matrix;
 		_scratchMatrix.a = m00;//TODO check if correct
 		_scratchMatrix.b = m10;
 		_scratchMatrix.c = m01;
 		_scratchMatrix.d = m11;
 		_scratchMatrix.tx = m02;
 		_scratchMatrix.ty = m12;
-		getTopState().matrix.concat(_scratchMatrix);
+		_scratchMatrix.concat(matrix);
+		matrix.copyFrom(_scratchMatrix);
+		//getTopState().matrix.concat(_scratchMatrix);
     }
 
-    public function drawTexture (texture :Texture, destX :Float, destY :Float)
-    {
+    public function drawTexture (texture :Texture, destX :Float, destY :Float) {
         blit(texture, destX, destY, null);
     }
 
     public function drawSubTexture (texture :Texture, destX :Float, destY :Float,
-        sourceX :Float, sourceY :Float, sourceW :Float, sourceH :Float)
-    {
+			sourceX :Float, sourceY :Float, sourceW :Float, sourceH :Float) {
         _scratchRect.x = sourceX;
         _scratchRect.y = sourceY;
         _scratchRect.width = sourceW;
@@ -240,84 +241,74 @@ class BitmapGraphics
     private function blit (texture :Texture, destX :Float, destY :Float, sourceRect :Rectangle)
     {
         flushGraphics();
-
+		
         var flashTexture = Lib.as(texture, BitmapTexture);
-		var root = flashTexture.root;
-		root.assertNotDisposed();
+		if (texture.width == 760) {
+			//trace("it's background "+flashTexture.root.image.getPixel(100,100));
+		}
         var state = getTopState();
         var matrix = state.matrix;
 
         // Use the faster copyPixels() if possible
-        // TODO(bruno): Use approximately equals?
-		
         if (matrix.a == 1 && matrix.b == 0 && matrix.c == 0 && matrix.d == 1
                 && state.color == null && state.blendMode == null) {
 
             if (sourceRect == null) {
                 sourceRect = _scratchRect;
-                /*sourceRect.x = 0;
-                sourceRect.y = 0;*/
-				sourceRect.x = flashTexture.x;
-                sourceRect.y = flashTexture.y;
+                sourceRect.x = 0;
+                sourceRect.y = 0;
+				/*sourceRect.x = flashTexture.x;
+                sourceRect.y = flashTexture.y;*/
                 sourceRect.width = flashTexture.width;
                 sourceRect.height = flashTexture.height;
             }
             _scratchPoint.x = matrix.tx + destX;
             _scratchPoint.y = matrix.ty + destY;
 			
-            _buffer.copyPixels(root.image, sourceRect, _scratchPoint);
-
+            _buffer.copyPixels(flashTexture.image, sourceRect, _scratchPoint);
         } else {
 			_scratchMatrix.copyFrom(matrix);
-			translate(destX, destY);
-			//matrix.translate(flashTexture.x, flashTexture.y);//TODO: will this work???
-			
-			
-            /*var copy = null;
             if (destX != 0 || destY != 0) { 
                 // TODO(bruno): Optimize?
-                copy = matrix.clone();
                 translate(destX, destY);
-            }*/
-            if (sourceRect != null) {
-                /*// BitmapData.draw() doesn't support a source rect, so we have to use a temp
+            }
+            if (sourceRect != null) { trace("source rect not null");
+                // BitmapData.draw() doesn't support a source rect, so we have to use a temp
                 // (contrary to the docs, clipRect is relative to the target, not the source)
                 if (sourceRect.width > 0 && sourceRect.height > 0) {
                     // TODO(bruno): Optimize?
+					
                     var scratch = new BitmapData(
-                        Std.int(sourceRect.width), Std.int(sourceRect.height),
-                        flashTexture.bitmapData.transparent);
+                        Std.int(sourceRect.width), Std.int(sourceRect.height));
                     _scratchPoint.x = 0;
                     _scratchPoint.y = 0;
-                    scratch.copyPixels(flashTexture.bitmapData, sourceRect, _scratchPoint);
+                    scratch.copyPixels(flashTexture.root.image, sourceRect, _scratchPoint);
+					
                     _buffer.draw(scratch, matrix, state.color, state.blendMode, null, true);
-					_buffer.draw(
                     scratch.dispose();
-                }*/
-				if (sourceRect.width > 0 && sourceRect.height > 0) {
-					_buffer.draw(root.image, matrix, state.color, state.blendMode, sourceRect, true);
                 }
+				/*if (sourceRect.width > 0 && sourceRect.height > 0) {
+					_buffer.draw(root.image, matrix, state.color, state.blendMode, sourceRect, true);
+                }*/
             } else {
-				_scratchRect.width = flashTexture.width;
-				_scratchRect.height = flashTexture.height;
+				/*_scratchRect.width = flashTexture.width;
+				_scratchRect.height = flashTexture.height;*/
 				/*_scratchRect.x = -flashTexture.rootX;
 				_scratchRect.y = -flashTexture.rootY;*/
 				/*_scratchRect.x = 0;
 				_scratchRect.y = 0;*/
-				_scratchMatrix.identity();
+				/*_scratchMatrix.identity();
 				_scratchMatrix.translate(-flashTexture.rootX, -flashTexture.rootY);
 				_scratchMatrix.concat(matrix);
 				_scratchRect.x = matrix.tx;
-				_scratchRect.y = matrix.ty;
+				_scratchRect.y = matrix.ty;*/
 				/*matrix.tx -= flashTexture.x;
 				matrix.ty -= flashTexture.y;*/
 				
                //_buffer.draw(root.image, _scratchMatrix, state.color, state.blendMode, _scratchRect, true);
-               _buffer.draw(root.image, _scratchMatrix, state.color, state.blendMode, null, true);
+               //_buffer.draw(root.image, _scratchMatrix, state.color, state.blendMode, null, true);
+               _buffer.draw(flashTexture.image, matrix, state.color, state.blendMode, null, true);
             }
-            /*if (copy != null) {
-                state.matrix = copy;
-            }*/
 			state.matrix.copyFrom(_scratchMatrix);
         }
     }
