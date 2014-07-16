@@ -13,8 +13,9 @@ class BitmapTexture extends BasicTexture<BitmapTextureRoot> {
 	
     public function new(root:BitmapTextureRoot, width:Int, height:Int) {
         super(root, width, height);
-		image = new BitmapData(width, height, true, 0);
-		image.copyPixels(root.image, image.rect, _zeroPoint);
+		/*image = new BitmapData(width, height, true, 0);
+		image.copyPixels(root.image, image.rect, _zeroPoint);*/
+		image = root.image;
     }
 	
 	public override function subTexture(x:Int, y:Int, width:Int, height:Int):BitmapTexture {
@@ -24,6 +25,7 @@ class BitmapTexture extends BasicTexture<BitmapTextureRoot> {
         sub._y = y;
         sub.rootX = rootX + x;
         sub.rootY = rootY + y;
+		sub.image = new BitmapData(width, height, true, 0);
 		sub.image.copyPixels(root.image, getRect(sub.rootX, sub.rootY, width, height), _zeroPoint);
         return sub;
     }
