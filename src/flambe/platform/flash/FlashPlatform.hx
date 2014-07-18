@@ -258,7 +258,8 @@ class FlashPlatform
 
     private function onRender (_)
     {
-        mainLoop.render(_renderer);
+		if(_renderer.canRender())
+			mainLoop.render(_renderer);
     }
 
     private function onUncaughtError (event :UncaughtErrorEvent)
