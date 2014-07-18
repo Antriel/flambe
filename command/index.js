@@ -165,13 +165,13 @@ exports.build = function (config, platforms, opts) {
                 var dataType = "";
                 var extension = filePath.substring(filePath.lastIndexOf(".") + 1).toLowerCase();
                 switch (extension) {
-                    case "png":
+                    /*case "png":
                     case "jpg":
                     case "jpeg":
                     case "jxr":
                     case "gif":
                         dataType = "bitmap";
-                        break;
+                        break;*/
                     case "mp3":
                         dataType = "sound";
                         break;
@@ -194,11 +194,11 @@ exports.build = function (config, platforms, opts) {
         var hxswfmlDoc = new xmldom.DOMParser().parseFromString("<lib></lib>");
         hxswfmlDoc.documentElement.setAttribute("width", get(config, "width"));
         hxswfmlDoc.documentElement.setAttribute("height", get(config, "height"));
+        hxswfmlDoc.documentElement.setAttribute("fps", 60);
+        hxswfmlDoc.documentElement.appendChild(hxswfmlDoc.createElement("frame"));
         assetPaths.forEach(function (assetPath) {
             generateAssetXml(assetPath, hxswfmlDoc);
         });
-        hxswfmlDoc.documentElement.appendChild(hxswfmlDoc.createElement("frame"));
-
         var xmlPath = CACHE_DIR+"swf/hxswfml_asset_lib_def.xml";
         fs.writeFileSync(xmlPath, new xmldom.XMLSerializer().serializeToString(hxswfmlDoc));
 
@@ -232,7 +232,7 @@ exports.build = function (config, platforms, opts) {
     var swfFlags = function (air) {
         // Flags common to all swf-based targets (flash, android, ios)
         var flags = ["--flash-strict"];
-        if (!get(config, "embed_assets")) {
+        if (!get(config, "embed_assets") && !get(config, "flash preloader", false)) {//or when using preloader
             // when assets are embedded, we take the header from their swf library so that
             // we can also absorb their timeline with -D flash-use-stage, which is incompatible with -swf-header
             var swfHeader = get(config, "width") + ":" + get(config, "height") + ":60:000000";
@@ -307,25 +307,25 @@ exports.build = function (config, platforms, opts) {
     };
 
     var buildFlash = function () {
-        var flashFlags = swfFlags(false);
+        var flashFlags = [];
         var dest = "";
 
         if (get(config, "flash preloader", false)) {
             dest = "build/web/targets/preloaded-flash.swc";
-            flashFlags.push("-D swf-preloader-frame");
+            flashFlags.push("-D swf-preloader-frame", "-D flash-use-stage");
         }
         else
         {
             dest = "build/web/targets/main-flash.swf";
         }
 
-        flashFlags = flashFlags.concat([
-            "-swf-version", SWF_VERSION, "-swf", dest]);
-
         return prepareWeb()
         .then(function () { return prepareAssets("build/web/assets", "flash") })
         .then(function (assetFlags) {
             console.log("Building: " + dest);
+            flashFlags = flashFlags.concat(swfFlags(false)).concat([
+            "-swf-version", SWF_VERSION, "-swf", dest]);
+            
             var mainFlags = commonFlags.concat(assetFlags).concat(flashFlags);
             return haxe(mainFlags);
         }).then(function() {
@@ -334,8 +334,11 @@ exports.build = function (config, platforms, opts) {
                 console.log("Building: " + main_dest);
                 getConnectFlags()
                 .then(function (connectFlags) {
-                    var preloaderFlags = connectFlags.concat(["-main", get(config, "flash preloader"),
-                        "-D flash-use-stage", "-dce no", "-swf-version", SWF_VERSION, "-swf-lib", dest, "-swf", main_dest]);
+                    var preloaderFlags = connectFlags.concat(["-main", get(config, "flash preloader"), "-D flash-use-stage",
+                    "-dce no", "-swf-version", SWF_VERSION, "-swf-lib", dest, "-swf", main_dest]);
+                    if (debug) {
+                        preloaderFlags.push("-debug", "-D fdb");
+                    }
 
                     srcPaths.forEach(function (srcDir) {
                         preloaderFlags.push("-cp", srcDir);
@@ -574,7 +577,7 @@ exports.build = function (config, platforms, opts) {
 
     wrench.mkdirSyncRecursive(CACHE_DIR);
 
-    getConnectFlags()
+    return getConnectFlags()
     .then(function (connectFlags) {
         commonFlags = commonFlags.concat(connectFlags);
 
