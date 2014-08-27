@@ -61,6 +61,7 @@ interface RendererSystem<NativeImage>
 
 enum RendererType
 {
+	FlashBitmap;
     Stage3D;
     WebGL;
     Canvas;

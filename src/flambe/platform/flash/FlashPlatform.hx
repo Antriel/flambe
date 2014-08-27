@@ -4,6 +4,7 @@
 
 package flambe.platform.flash;
 
+import flash.display.BitmapData;
 import flash.Lib;
 import flash.display.Sprite;
 import flash.events.Event;
@@ -50,13 +51,19 @@ class FlashPlatform
 #else
         _touch = new DummyTouch();
 #end
-
+		
+#if flambe_flash_bitmap_renderer
+		var bitmapRenderer = new BitmapRenderer();
+		_renderer = bitmapRenderer;
+		promise.result = true;//can work immediately
+#else
         var stage3DRenderer = new Stage3DRenderer();
         _renderer = stage3DRenderer;
         stage3DRenderer.promise.success.connect(function (result) {
             // Stage3DRenderer's initialization is the only asynchronous part of FlashPlatform's init
             promise.result = result;
         });
+#end
         mainLoop = new MainLoop();
 
         stage.addEventListener(Event.ENTER_FRAME, onEnterFrame);
@@ -202,7 +209,7 @@ class FlashPlatform
         return _motion;
     }
 
-    public function getRenderer () :Stage3DRenderer
+    public function getRenderer () :InternalRenderer<BitmapData>
     {
         return _renderer;
     }
@@ -251,7 +258,8 @@ class FlashPlatform
 
     private function onRender (_)
     {
-        mainLoop.render(_renderer);
+		if(_renderer.canRender())
+			mainLoop.render(_renderer);
     }
 
     private function onUncaughtError (event :UncaughtErrorEvent)
@@ -272,7 +280,7 @@ class FlashPlatform
     // Statically initialized subsystems
     private var _mouse :MouseSystem;
     private var _pointer :BasicPointer;
-    private var _renderer :Stage3DRenderer;
+    private var _renderer :InternalRenderer<BitmapData>;
     private var _stage :FlashStage;
     private var _touch :TouchSystem;
 
