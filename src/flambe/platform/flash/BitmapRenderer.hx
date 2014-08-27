@@ -69,7 +69,7 @@ class BitmapRenderer
     }
 	
 	public function createTexture (width :Int, height :Int) :Texture {
-		var root = new BitmapTextureRoot(new BitmapData(width, height, false, 0xffffff));
+		var root = new BitmapTextureRoot(new BitmapData(width, height, true, 0));
         return root.createTexture(width, height);
 	}
 	
@@ -103,7 +103,7 @@ class BitmapRenderer
             width = height = 100;
         }
 
-        _screen = new BitmapData(width, height, false, 0xffffff);
+        _screen = new BitmapData(width, height, true, 0);
         graphics = new BitmapGraphics(_screen);
         _bitmap.bitmapData = _screen;
     }

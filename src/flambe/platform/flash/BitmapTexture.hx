@@ -24,7 +24,7 @@ class BitmapTexture extends BasicTexture<BitmapTextureRoot> {
         sub.rootX = rootX + x;
         sub.rootY = rootY + y;
 		sub.image = new BitmapData(width, height, true, 0);
-		sub.image.copyPixels(root.image, getRect(sub.rootX, sub.rootY, width, height), _zeroPoint);
+		sub.image.copyPixels(root.image, getRect(sub.rootX, sub.rootY, width, height), _zeroPoint, null, null, true);
         return sub;
     }
 	
