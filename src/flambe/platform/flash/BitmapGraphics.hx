@@ -259,7 +259,7 @@ class BitmapGraphics
             _scratchPoint.x = matrix.tx + destX;
             _scratchPoint.y = matrix.ty + destY;
 			
-            _buffer.copyPixels(flashTexture.image, sourceRect, _scratchPoint);
+            _buffer.copyPixels(flashTexture.image, sourceRect, _scratchPoint, null, null, true);
         } else {
 			_scratchMatrix.copyFrom(matrix);
             if (destX != 0 || destY != 0) { 
@@ -271,10 +271,10 @@ class BitmapGraphics
                 // (contrary to the docs, clipRect is relative to the target, not the source)
                 if (sourceRect.width > 0 && sourceRect.height > 0) {
                     var scratch = new BitmapData(
-                        Std.int(sourceRect.width), Std.int(sourceRect.height));
+                        Std.int(sourceRect.width), Std.int(sourceRect.height), true, 0);
                     _scratchPoint.x = 0;
                     _scratchPoint.y = 0;
-                    scratch.copyPixels(flashTexture.root.image, sourceRect, _scratchPoint);
+                    scratch.copyPixels(flashTexture.root.image, sourceRect, _scratchPoint, null, null, true);
 					
                     _buffer.draw(scratch, matrix, state.color, state.blendMode, null, true);
                     scratch.dispose();

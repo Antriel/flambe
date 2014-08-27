@@ -232,14 +232,14 @@ exports.build = function (config, platforms, opts) {
     var swfFlags = function (air) {
         // Flags common to all swf-based targets (flash, android, ios)
         var flags = ["--flash-strict"];
-        if (!get(config, "embed_assets") && !get(config, "flash preloader", false)) {//or when using preloader
+        //if (!get(config, "embed_assets") && !get(config, "flash preloader", false)) {//or when using preloader
             // when assets are embedded, we take the header from their swf library so that
             // we can also absorb their timeline with -D flash-use-stage, which is incompatible with -swf-header
             var swfHeader = get(config, "width") + ":" + get(config, "height") + ":60:000000";
             flags.push("-swf-header", swfHeader);
-        }
+       //}
         if (debug) flags.push("-D", "fdb", "-D", "advanced-telemetry");
-        else flags.push("-D", "native_trace");
+        else flags.push("-D", "native-trace");
 
         // Include any swc/swf libs in the libs directories
         libPaths.forEach(function (libPath) {
@@ -312,7 +312,7 @@ exports.build = function (config, platforms, opts) {
 
         if (get(config, "flash preloader", false)) {
             dest = "build/web/targets/preloaded-flash.swc";
-            flashFlags.push("-D swf-preloader-frame", "-D flash-use-stage");
+            flashFlags.push("-D swf-preloader-frame"/*, "-D flash-use-stage"*/);
         }
         else
         {
@@ -334,8 +334,10 @@ exports.build = function (config, platforms, opts) {
                 console.log("Building: " + main_dest);
                 getConnectFlags()
                 .then(function (connectFlags) {
-                    var preloaderFlags = connectFlags.concat(["-main", get(config, "flash preloader"), "-D flash-use-stage",
+					var preloaderFlags = connectFlags.concat(toArray(get(config, "flash preloader_flags", [])));
+                    preloaderFlags = preloaderFlags.concat(["-main", get(config, "flash preloader"), "-D flash-use-stage",
                     "-dce no", "-swf-version", SWF_VERSION, "-swf-lib", dest, "-swf", main_dest]);
+					
                     if (debug) {
                         preloaderFlags.push("-debug", "-D fdb");
                     }
@@ -591,7 +593,7 @@ exports.build = function (config, platforms, opts) {
         if (debug) {
             commonFlags.push("-debug", "--no-opt", "--no-inline");
         } else {
-            commonFlags.push("--no-traces");
+            //commonFlags.push("--no-traces");
         }
     })
     .then(function () {
@@ -1005,6 +1007,10 @@ var copyFileSync = function (from, to) {
 var forEachFileIn = function (dir, callback) {
     try {
         var files = fs.readdirSync(dir);
+		/*if(files.indexOf("library.swf") != -1){//force library be last
+			files.splice(files.indexOf("library.swf"), 1);
+			files.push("library.swf");
+		}*/
     } catch (error) {
         return; // Ignore missing directory
     }

@@ -35,8 +35,8 @@ class FlashEmbeddedAssetPackLoader extends BasicAssetPackLoader
 	
     public function new (platform :FlashPlatform, manifest :Manifest)
     {
-        super(platform, manifest);
 		loaders = [];
+        super(platform, manifest);
     }
 
     override private function loadEntry (url :String, entry :AssetEntry)
